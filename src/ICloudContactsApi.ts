@@ -1,6 +1,7 @@
 import { ICloudContactsSettings } from "./SettingTab";
 import { createFrontmatter } from "./frontMatter";
 import { parseVCardToJCard } from "./parser";
+import { sanitizeFilename } from "./sanitize";
 
 export type ICloudVCard = {
 	url: string;
@@ -96,6 +97,7 @@ export default class ICloudContactsApi {
 	private modifiedContacts: ICloudVCard[] = [];
 	private deletedContacts: ICloudVCard[] = [];
 	private skippedContacts: ICloudVCard[] = [];
+	private groupMap: Map<string, string[]> = new Map();
 
 	constructor(
 		onlyRequiredFromObsidianApp: OnlyRequiredFromObsidianApi,
@@ -147,6 +149,8 @@ export default class ICloudContactsApi {
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
+
+			this.groupMap = this.buildGroupMap(iCloudVCards);
 
 			if (this.settings.groups.length > 0) {
 				// Find all chosen group cards
@@ -216,6 +220,10 @@ export default class ICloudContactsApi {
 				);
 			}
 
+			if (options.rewriteAll) {
+				await this.applyReciprocalEdges();
+			}
+
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 		} catch (e) {
 			console.error(e);
@@ -240,6 +248,7 @@ export default class ICloudContactsApi {
 		this.modifiedContacts = [];
 		this.deletedContacts = [];
 		this.skippedContacts = [];
+		this.groupMap = new Map();
 
 		return { updateData, usedSettings };
 	}
@@ -391,9 +400,11 @@ export default class ICloudContactsApi {
 		existingContact: { frontmatter: Properties; path: string },
 		previousVCard: ICloudVCard | undefined,
 	) {
+		const groupNames = this.getGroupNamesForVCard(iCloudVCard.data);
 		const newFrontMatter = createFrontmatter(
 			iCloudVCard.data,
 			this.settings,
+			groupNames,
 		);
 
 		const contactFile = this.app.vault.getFileByPath(existingContact.path);
@@ -475,14 +486,15 @@ export default class ICloudContactsApi {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings);
+		const groupNames = this.getGroupNamesForVCard(iCloudVCard.data);
+		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings, groupNames);
 
 		let filePath = await this.createUniqeContactFilePath(
 			frontMatter.name as string,
 		);
 
 		const newFile = await this.app.vault.create(
-			this.normalizePath(filePath.replace(/\\/g, "")),
+			this.normalizePath(filePath),
 			this.settings.isNameHeading ? `# ${frontMatter.name}` : "",
 		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
@@ -494,7 +506,10 @@ export default class ICloudContactsApi {
 	}
 
 	private async createUniqeContactFilePath(subPath: string) {
-		let filePath = `${this.settings.folder}/${subPath}.md`;
+		const parts = subPath.split("/");
+		const safeName = sanitizeFilename(parts[parts.length - 1]);
+		const safeSubPath = [...parts.slice(0, -1), safeName].join("/");
+		let filePath = `${this.settings.folder}/${safeSubPath}.md`;
 		let i = 1;
 		while (true) {
 			const fileExists = await this.app.vault.adapter.exists(
@@ -503,7 +518,7 @@ export default class ICloudContactsApi {
 			);
 			if (!fileExists) break;
 			i++;
-			filePath = `${this.settings.folder}/${subPath} ${i}.md`;
+			filePath = `${this.settings.folder}/${safeSubPath} ${i}.md`;
 		}
 		return filePath;
 	}
@@ -587,11 +602,106 @@ export default class ICloudContactsApi {
 		return await this.app.vault.create(filePath, "");
 	}
 
-	private async handleError(heading: string, error: Error, data?: any) {
+	private buildGroupMap(allVCards: ICloudVCard[]): Map<string, string[]> {
+		const map = new Map<string, string[]>();
+		for (const vCard of allVCards) {
+			if (!this.isGroupCard(vCard)) continue;
+			const jCard = parseVCardToJCard(vCard.data);
+			const groupName = jCard.find((c) => c.key === "fn")?.value as
+				| string
+				| undefined;
+			if (!groupName) continue;
+			for (const card of jCard) {
+				if (card.key !== "xAddressbookserverMember") continue;
+				const uid = (card.value as string).replace("urn:uuid:", "");
+				const existing = map.get(uid);
+				if (existing) existing.push(groupName);
+				else map.set(uid, [groupName]);
+			}
+		}
+		return map;
+	}
+
+	private getGroupNamesForVCard(vCardData: string): string[] | undefined {
+		const match = vCardData.match(/^UID:(.+)$/m);
+		if (!match) return undefined;
+		const uid = match[1].trim();
+		return this.groupMap.get(uid);
+	}
+
+	private async applyReciprocalEdges() {
+		const contacts = await this.getAllCurrentContacts(this.settings.folder);
+
+		const nameToPath = new Map<string, string>();
+		for (const contact of contacts) {
+			const name = contact.frontmatter.name as string | undefined;
+			if (name) nameToPath.set(name, contact.path);
+		}
+
+		const RECIPROCAL: Record<string, string> = {
+			child: "parent",
+			spouse: "spouse",
+			sibling: "sibling",
+		};
+
+		for (const contact of contacts) {
+			const sourceName = contact.frontmatter.name as string | undefined;
+			if (!sourceName) continue;
+			const sourceLink = `[[${sanitizeFilename(sourceName)}]]`;
+
+			for (const [key, reciprocalKey] of Object.entries(RECIPROCAL)) {
+				const links = this.toStringArray(contact.frontmatter[key]);
+				for (const link of links) {
+					const targetName = this.extractWikilinkTarget(link);
+					const targetPath = nameToPath.get(targetName);
+					if (!targetPath) continue;
+					await this.addReciprocalEdge(
+						targetPath,
+						reciprocalKey,
+						sourceLink,
+					);
+				}
+			}
+		}
+	}
+
+	private async addReciprocalEdge(
+		filePath: string,
+		key: string,
+		value: string,
+	) {
+		const file = this.app.vault.getFileByPath(filePath);
+		if (!file) return;
+		await this.app.fileManager.processFrontMatter(file, (fm) => {
+			const existing = fm[key];
+			if (Array.isArray(existing)) {
+				if (!existing.includes(value)) existing.push(value);
+			} else if (existing) {
+				if (existing !== value) fm[key] = [existing, value];
+			} else {
+				fm[key] = [value];
+			}
+		});
+	}
+
+	private extractWikilinkTarget(link: string): string {
+		const match = link.match(/^\[\[([^|\]]+)/);
+		return match ? match[1].trim() : link;
+	}
+
+	private toStringArray(value: unknown): string[] {
+		if (!value) return [];
+		if (Array.isArray(value))
+			return value.filter((v) => typeof v === "string") as string[];
+		if (typeof value === "string") return [value];
+		return [];
+	}
+
+	private async handleError(heading: string, error: unknown, data?: any) {
 		let errorText = `## ${heading}
 ### Error message
 
-${error.message}
+${error instanceof Error ? error.message : String(error)}
 `;
 		if (data)
 			errorText += `### Data

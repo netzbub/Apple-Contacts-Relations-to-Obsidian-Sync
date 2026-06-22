@@ -1573,4 +1573,187 @@ describe("updateContacts", () => {
 			"All contacts were updated to reflect new settings",
 		);
 	});
+
+	describe("applyReciprocalEdges", () => {
+		const vCardAnna: ICloudVCard = {
+			url: "url-anna",
+			etag: '"etag-anna"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"FN:Anna\r\n" +
+				"N:;Anna;;;\r\n" +
+				"UID:uid-anna\r\n" +
+				"END:VCARD",
+		};
+		const vCardBen: ICloudVCard = {
+			url: "url-ben",
+			etag: '"etag-ben"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"FN:Ben\r\n" +
+				"N:;Ben;;;\r\n" +
+				"UID:uid-ben\r\n" +
+				"END:VCARD",
+		};
+
+		const annaFile = { path: "Contacts/Anna.md", basename: "Anna" };
+		const benFile = { path: "Contacts/Ben.md", basename: "Ben" };
+
+		function setupTwoContacts(
+			annaExtra: Record<string, unknown> = {},
+			benExtra: Record<string, unknown> = {},
+		) {
+			mockFetchContacts.mockResolvedValue([vCardAnna, vCardBen]);
+
+			mockObsidianApi.app.vault.adapter.list.mockResolvedValue({
+				files: ["Contacts/Anna.md", "Contacts/Ben.md"],
+				folders: [],
+			});
+
+			mockObsidianApi.app.metadataCache.getCache.mockImplementation(
+				(path: string) => {
+					if (path === "Contacts/Anna.md") {
+						return {
+							frontmatter: {
+								name: "Anna",
+								...annaExtra,
+								iCloudVCard: vCardAnna,
+							},
+						};
+					}
+					if (path === "Contacts/Ben.md") {
+						return {
+							frontmatter: {
+								name: "Ben",
+								...benExtra,
+								iCloudVCard: vCardBen,
+							},
+						};
+					}
+					return null;
+				},
+			);
+
+			mockObsidianApi.app.vault.getFileByPath.mockImplementation(
+				(path: string) => {
+					if (path === "Contacts/Anna.md") return annaFile;
+					if (path === "Contacts/Ben.md") return benFile;
+					return null;
+				},
+			);
+		}
+
+		function captureReciprocalFnsFor(targetFile: object) {
+			const captured: Array<(fm: Record<string, unknown>) => void> = [];
+			mockObsidianApi.app.fileManager.processFrontMatter.mockImplementation(
+				async (file: any, fn: any) => {
+					if (file === targetFile) captured.push(fn);
+					fn({});
+				},
+			);
+			return captured;
+		}
+
+		function findFnThatSets(
+			fns: Array<(fm: Record<string, unknown>) => void>,
+			key: string,
+		) {
+			return fns.find((fn) => {
+				const fm: Record<string, unknown> = {};
+				fn(fm);
+				return fm[key] !== undefined;
+			});
+		}
+
+		function makeApi() {
+			// Some earlier tests mutate MOCK_DEFAULT_SETTINGS.previousUpdateSettings
+			// without resetting, so build a fresh settings object here to ensure
+			// haveSettingsChanged stays false regardless of test execution order.
+			const settings: ICloudContactsSettings = {
+				...MOCK_DEFAULT_SETTINGS,
+				isNameHeading: true,
+				previousUpdateSettings: MOCK_DEFAULT_SETTINGS.previousUpdateSettings
+					? {
+							...MOCK_DEFAULT_SETTINGS.previousUpdateSettings,
+							isNameHeading: true,
+						}
+					: undefined,
+			};
+			return new ICloudContactsApi(
+				mockObsidianApi,
+				settings,
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+		}
+
+		test("child→parent: A.child=[[Ben]] adds parent=[[Anna]] to Ben", async () => {
+			setupTwoContacts({ child: ["[[Ben]]"] });
+			const benFns = captureReciprocalFnsFor(benFile);
+
+			await (await makeApi()).updateContacts({ rewriteAll: true });
+
+			const setter = findFnThatSets(benFns, "parent");
+			expect(setter).toBeDefined();
+			const fm: Record<string, unknown> = {};
+			setter!(fm);
+			expect(fm.parent).toEqual(["[[Anna]]"]);
+		});
+
+		test("spouse↔spouse: A.spouse=[[Ben]] adds spouse=[[Anna]] to Ben", async () => {
+			setupTwoContacts({ spouse: ["[[Ben]]"] });
+			const benFns = captureReciprocalFnsFor(benFile);
+
+			await (await makeApi()).updateContacts({ rewriteAll: true });
+
+			const setter = findFnThatSets(benFns, "spouse");
+			expect(setter).toBeDefined();
+			const fm: Record<string, unknown> = {};
+			setter!(fm);
+			expect(fm.spouse).toEqual(["[[Anna]]"]);
+		});
+
+		test("sibling↔sibling: A.sibling=[[Ben]] adds sibling=[[Anna]] to Ben", async () => {
+			setupTwoContacts({ sibling: ["[[Ben]]"] });
+			const benFns = captureReciprocalFnsFor(benFile);
+
+			await (await makeApi()).updateContacts({ rewriteAll: true });
+
+			const setter = findFnThatSets(benFns, "sibling");
+			expect(setter).toBeDefined();
+			const fm: Record<string, unknown> = {};
+			setter!(fm);
+			expect(fm.sibling).toEqual(["[[Anna]]"]);
+		});
+
+		test("No duplicate: existing parent=[[Anna]] not added again", async () => {
+			setupTwoContacts({ child: ["[[Ben]]"] }, { parent: ["[[Anna]]"] });
+			const benFns = captureReciprocalFnsFor(benFile);
+
+			await (await makeApi()).updateContacts({ rewriteAll: true });
+
+			const setter = findFnThatSets(benFns, "parent");
+			if (setter) {
+				const fm: Record<string, unknown> = { parent: ["[[Anna]]"] };
+				setter(fm);
+				expect(fm.parent).toEqual(["[[Anna]]"]);
+			}
+		});
+
+		test("No reciprocal edges on regular (rewriteAll=false) sync", async () => {
+			setupTwoContacts({ child: ["[[Ben]]"] });
+
+			await (await makeApi()).updateContacts({ rewriteAll: false });
+
+			// applyReciprocalEdges calls getAllCurrentContacts which calls adapter.list.
+			// With rewriteAll=false the second pass never runs, so adapter.list is
+			// called exactly once (the initial getAllCurrentContacts at the top of
+			// updateContacts).
+			expect(
+				mockObsidianApi.app.vault.adapter.list.mock.calls.length,
+			).toBe(1);
+		});
+	});
 });

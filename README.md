@@ -1,19 +1,27 @@
-# Apple Contacts Relations to Obsidian Sync
+# Apple Contacts Relations to Obsidian sync
+
+<p align="center">
+  <img src="https://img.shields.io/badge/dynamic/json?label=manifest&query=%24.version&url=https%3A%2F%2Fraw.githubusercontent.com%2Fnetzbub%2FApple-Contacts-Relations-to-Obsidian-Sync%2Fmain%2Fmanifest.json&color=blue" alt="manifest version">
+  <img src="https://img.shields.io/github/license/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync" alt="license">
+  <img src="https://img.shields.io/github/issues/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync?color=yellow" alt="open issues">
+</p>
+<!-- Re-add once the first GitHub Release exists (until then these render as "no release"/0):
+  <img src="https://img.shields.io/github/v/release/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync" alt="latest release">
+  <img src="https://img.shields.io/github/downloads/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync/total" alt="downloads">
+-->
 
 Sync macOS / iCloud Contacts into Obsidian as clean, well-structured Markdown notes —
 and turn the **relationships** that already live in your address book (family, project
 teams, company membership) into data you can query, chart and visualise inside Obsidian.
 
-> Status: this is an early fork of Truls Aagaard's
-> [obsidian-icloud-contacts](https://github.com/trulsaa/obsidian-icloud-contacts).
-> The **sync engine is his, working and battle-tested**. The relation/genealogy/locale
-> features described under *What this fork adds* are a **roadmap** — see the explicit
-> "planned / done" markers. Nothing here pretends to be finished that isn't.
----  
+<p align="center">
+<img src="images/Beatles.jpg" width="700" alt="400">  
+</p>
+
 ## Table of contents
 <!-- TOC -->
 
-- [Apple Contacts Relations to Obsidian Sync](#apple-contacts-relations-to-obsidian-sync)
+- [Apple Contacts Relations to Obsidian sync](#apple-contacts-relations-to-obsidian-sync)
     - [Table of contents](#table-of-contents)
     - [Purpose](#purpose)
     - [What this fork adds vs. Truls Aagaard's original](#what-this-fork-adds-vs-truls-aagaards-original)
@@ -27,6 +35,7 @@ teams, company membership) into data you can query, chart and visualise inside O
         - [B Sync into Obsidian](#b-sync-into-obsidian)
         - [C Analyse / visualise in Obsidian](#c-analyse--visualise-in-obsidian)
     - [Localisation](#localisation)
+        - [A note on languages with richer kinship systems](#a-note-on-languages-with-richer-kinship-systems)
     - [License](#license)
     - [Acknowledgments](#acknowledgments)
 
@@ -58,16 +67,17 @@ Typical uses:
 
 ## What this fork adds (vs. Truls Aagaard's original)
 
-The original syncs contacts faithfully but flattens several things that this fork aims to
-make **structured and analysable**. Honest status per item:
+The original syncs contacts faithfully but flattens several things that this fork now
+makes **structured and analysable**. Status per item (all implemented):
 
 | # | Improvement | Why it matters ("leverage") | Status |
 |---|---|---|---|
-| 1 | **Write group membership** as a `groups:` property per contact | The original already *fetches* iCloud group cards (CardDAV `X-ADDRESSBOOKSERVER-KIND:group`) but only uses them to *filter* which contacts to sync. Writing membership exposes your entire ~X00-group taxonomy as a queryable property. | planned |
-| 2 | **Split the address** into `street` / `city` / `postcode` / `country` | The original joins `ADR` into one string. Split fields enable map/geocoding and clean queries. | planned |
-| 3 | **Un-escape notes** (`\n`, `\,` → real newline/comma) | The original leaks vCard escaping into the note text. | planned |
-| 4 | **Typed relationship keys** (`parent`, `spouse`, `child`, `sibling`, …) | The original puts all related names into one `related names` list. Splitting into typed keys is what lets Obsidian extensions like **Relations** / **Breadcrumbs** draw family trees and project hierarchies. | planned |
-| 5 | **Localisation layer** (`relationship_locales.json`) | English canonical relationship keys + per-language label maps, so the tool works for non-German/English address books. | partly designed |
+| 1 | **Write group membership** as a `groups:` property per contact | The original already *fetches* iCloud group cards (CardDAV `X-ADDRESSBOOKSERVER-KIND:group`) but only uses them to *filter* which contacts to sync. Writing membership exposes your entire ~X00-group taxonomy as a queryable property. | done |
+| 2 | **Split the address** into `street` / `city` / `postcode` / `country` | The original joins `ADR` into one string. Split fields enable map/geocoding and clean queries. | done |
+| 3 | **Un-escape notes** (`\n`, `\,` → real newline/comma) | The original leaks vCard escaping into the note text. | done |
+| 4 | **Typed relationship keys** (`parent`, `spouse`, `child`, `sibling`, …) | The original puts all related names into one `related names` list. Splitting into typed keys is what lets Obsidian extensions like **Relations** / **Breadcrumbs** draw family trees and project hierarchies. Reciprocal `parent` / `spouse` / `sibling` edges are auto-completed on a full sync, so one-sided entries still produce a complete tree. | done |
+| 5 | **Localisation layer** (`relationship_locales.json`) | English canonical relationship keys + per-language label maps, so the tool works for non-German/English address books. | done |
+| 6 | **Filesystem-safe filenames + name-based linking** | Sanitises only the characters that are unsafe on file systems / WebDAV (slash, colon, asterisk, quote, angle brackets, pipe, hash, leading/trailing whitespace, trailing dots), keeps spaces and umlauts, and normalises to Unicode NFC (avoids macOS ↔ Nextcloud mismatches). Relationships resolve against the `name` frontmatter / alias, not the raw filename — so sanitising a name never breaks a link. | done |
 
 "Leverage" = biggest benefit per unit of effort. #1 and #4 unlock the most (groups +
 genealogy visualisation); #2 enables maps; #3 fixes readability.
@@ -193,7 +203,8 @@ This is where the value is created. Conventions:
 ### B) Sync into Obsidian
 
 Run the command **"Update Contacts"** (only changed contacts) or **"Update all
-Contacts"** (rewrites everything — use after changing settings/excluded keys).
+Contacts"** (rewrites everything — use after changing settings/excluded keys). Reciprocal
+relationship edges are completed during a full **"Update all Contacts"** run.
 
 The plugin only manages a fixed set of keys plus the title and the top H1. **Anything
 else you write in a note — and any extra frontmatter keys you add yourself (e.g.
@@ -282,8 +293,8 @@ want full fidelity can switch on the extended keys for their locale.
 ## License
 
 GNU Affero General Public License v3.0 (AGPL-3.0). See `LICENSE.TXT`.
-(Note: the original `package.json` declares `GPL-3.0` while the manifest/LICENSE state
-AGPL-3.0 — this fork standardises on AGPL-3.0.)
+(The upstream `package.json` declared `GPL-3.0` while its manifest/LICENSE stated
+AGPL-3.0; this fork uses AGPL-3.0 consistently.)
 
 ---
 

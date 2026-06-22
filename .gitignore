@@ -18,8 +18,9 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 
-# Exclude old files
+# Exclude files
 README_old.md
+CLAUDE.md
 
 # VS Code Local History extension
 .history/

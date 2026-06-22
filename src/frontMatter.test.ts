@@ -244,8 +244,8 @@ const testCases = [
 		],
 		{
 			addresses: [
-				"Home road 6, Texas, 1234, United States",
-				"Work street 2, Alta, 7896, Norway",
+				{ street: "Home road 6", city: "Texas", postcode: "1234", country: "United States" },
+				{ street: "Work street 2", city: "Alta", postcode: "7896", country: "Norway" },
 			],
 			name: "Full Name",
 		},
@@ -295,8 +295,8 @@ const testCases = [
 		],
 		{
 			addresses: [
-				"Hjemme: Home road 6, Texas, 1234, United States",
-				"Work: Work street 2, Alta, 7896, Norway",
+				{ label: "Hjemme", street: "Home road 6", city: "Texas", postcode: "1234", country: "United States" },
+				{ label: "Work", street: "Work street 2", city: "Alta", postcode: "7896", country: "Norway" },
 			],
 			name: "Full Name",
 		},
@@ -337,7 +337,7 @@ const testCases = [
 		},
 	],
 	[
-		"Should parse related names",
+		"Should parse related names into typed keys (relatedLabels: true)",
 		[
 			{
 				key: "xAbrelatednames",
@@ -365,10 +365,8 @@ const testCases = [
 			},
 		],
 		{
-			"related names": [
-				"[[Test Nordmann|Mother: Test Nordmann]]",
-				"[[Test Nordmann|Child: Test Nordmann]]",
-			],
+			parent: ["[[Test Nordmann]]"],
+			child: ["[[Test Nordmann]]"],
 			name: "Full Name",
 		},
 		{
@@ -377,7 +375,7 @@ const testCases = [
 		},
 	],
 	[
-		"Should parse related names",
+		"Should parse related names into typed keys (relatedLabels: false)",
 		[
 			{
 				key: "xAbrelatednames",
@@ -405,7 +403,65 @@ const testCases = [
 			},
 		],
 		{
-			"related names": ["[[Test Nordmann]]", "[[Test Nordmann]]"],
+			parent: ["[[Test Nordmann]]"],
+			child: ["[[Test Nordmann]]"],
+			name: "Full Name",
+		},
+		defaultSettings,
+	],
+	[
+		"Should map unknown related label to 'related'",
+		[
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item20" },
+				type: "text",
+				value: "Unbekannte Person",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item20" },
+				type: "text",
+				value: "Götti",
+			},
+		],
+		{
+			related: ["[[Unbekannte Person]]"],
+			name: "Full Name",
+		},
+		defaultSettings,
+	],
+	[
+		"Should map German custom labels to typed keys",
+		[
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item21" },
+				type: "text",
+				value: "Franz Müller",
+			},
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item22" },
+				type: "text",
+				value: "Maria Müller",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item21" },
+				type: "text",
+				value: "Onkel",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item22" },
+				type: "text",
+				value: "Schwägerin",
+			},
+		],
+		{
+			uncle: ["[[Franz Müller]]"],
+			sisterinlaw: ["[[Maria Müller]]"],
 			name: "Full Name",
 		},
 		defaultSettings,
@@ -644,6 +700,30 @@ const testCases = [
 		defaultSettings,
 	],
 	[
+		"Should unescape vCard escapes in notes",
+		[{ key: "note", meta: {}, type: "text", value: "Zeile 1\\nZeile 2\\, noch mehr\\; text" }],
+		{ name: "Full Name", note: "Zeile 1\nZeile 2, noch mehr; text" },
+		defaultSettings,
+	],
+	[
+		"Should split note into tags and body on --- delimiter",
+		[{ key: "note", meta: {}, type: "text", value: "tag1, tag2\\n---\\nEigentlicher Notiztext" }],
+		{ name: "Full Name", tags: ["tag1", "tag2"], note: "Eigentlicher Notiztext" },
+		defaultSettings,
+	],
+	[
+		"Should split line-separated tags in note",
+		[{ key: "note", meta: {}, type: "text", value: "tag1\\ntag2\\n---\\nBody" }],
+		{ name: "Full Name", tags: ["tag1", "tag2"], note: "Body" },
+		defaultSettings,
+	],
+	[
+		"Should emit only tags when note body is empty",
+		[{ key: "note", meta: {}, type: "text", value: "tag1\\n---\\n" }],
+		{ name: "Full Name", tags: ["tag1"] },
+		defaultSettings,
+	],
+	[
 		"Should parse date",
 		[
 			{
@@ -726,6 +806,32 @@ const testCases = [
 		},
 	], */
 ];
+
+describe("createFrontmatter groups", () => {
+	test("Should add groups as wikilinks when groupNames provided", () => {
+		expect(
+			createFrontmatterFromParsedVCard(
+				[{ key: "nickname", meta: {}, type: "text", value: "nick" }],
+				"Full Name",
+				defaultSettings,
+				["Familie", "Freunde"],
+			),
+		).toEqual({
+			name: "Full Name",
+			nickname: "nick",
+			groups: ["[[Familie]]", "[[Freunde]]"],
+		});
+	});
+
+	test("Should not add groups key when groupNames is undefined", () => {
+		const result = createFrontmatterFromParsedVCard(
+			[{ key: "nickname", meta: {}, type: "text", value: "nick" }],
+			"Full Name",
+			defaultSettings,
+		);
+		expect(result).not.toHaveProperty("groups");
+	});
+});
 
 describe("createFrontmatter", () => {
 	describe("parseVCard", () => {

@@ -1,5 +1,16 @@
 import { VCards } from "./VCards";
 import { parseVCardToJCardAndFullName } from "./parser";
+import { labelToCanonical } from "./relationshipMapping";
+import { sanitizeFilename } from "./sanitize";
+
+type Address = {
+	label?: string;
+	street?: string;
+	city?: string;
+	state?: string;
+	postcode?: string;
+	country?: string;
+};
 
 export function createFrontmatter(
 	iCloudVCardData: string,
@@ -11,12 +22,14 @@ export function createFrontmatter(
 		addressLabels: boolean;
 		excludedKeys: string;
 	},
+	groupNames?: string[],
 ) {
 	const { jCard, fullName } = parseVCardToJCardAndFullName(iCloudVCardData);
 	return createFrontmatterFromParsedVCard(
 		jCard as VCards[],
 		fullName,
 		settings,
+		groupNames,
 	);
 }
 
@@ -38,6 +51,7 @@ export function createFrontmatterFromParsedVCard(
 		addressLabels: boolean;
 		excludedKeys: string;
 	},
+	groupNames?: string[],
 ) {
 	const labels = parsedVCards.filter(({ key }) => key === "xAbLabel");
 	const contact = parsedVCards.reduce(
@@ -72,15 +86,30 @@ export function createFrontmatterFromParsedVCard(
 					urlLabels && label ? `${label}: ${value}` : value,
 					o,
 				);
-			if (key === "xAbrelatednames")
-				return addValueToArray(
-					"related names",
-					wrapInBrackets(
-						value,
-						relatedLabels && label ? label : undefined,
-					),
-					o,
-				);
+			if (key === "xAbrelatednames") {
+				const canonicalKey = label ? labelToCanonical(label) : "related";
+				const safeName = sanitizeFilename(value as string);
+				return addValueToArray(canonicalKey, `[[${safeName}]]`, o);
+			}
+			if (key === "note") {
+				const unescaped = unescapeVCard(value as string);
+				const delimIdx = unescaped.indexOf("\n---\n");
+				if (delimIdx !== -1) {
+					const tagPart = unescaped.slice(0, delimIdx);
+					const body = unescaped.slice(delimIdx + 5).trim();
+					const tags = tagPart
+						.split(/[\n,]/)
+						.map((t) => t.trim())
+						.filter(Boolean);
+					const result: { [key: string]: string | string[] } = {
+						...(o as any),
+					};
+					if (tags.length > 0) result.tags = tags;
+					if (body) result.note = body;
+					return result;
+				}
+				return { ...o, note: unescaped };
+			}
 			if (key === "impp")
 				return addValueToArray(
 					"instant message",
@@ -109,6 +138,8 @@ export function createFrontmatterFromParsedVCard(
 		},
 		{ name: fullName },
 	);
+	if (groupNames && groupNames.length > 0)
+		(contact as any).groups = groupNames.map((g) => `[[${g}]]`);
 	return contact as { [key: string]: string | string[] };
 }
 
@@ -123,21 +154,26 @@ function stripSocialValue(value: string) {
 
 function addAddresses(
 	value: string[],
-	o: { name: string; addresses?: string[] },
+	o: { name: string; addresses?: Address[] },
 	label?: string,
 ) {
-	let address = value.filter((v) => !!v).join(", ");
-	if (label) address = `${label}: ${address}`;
+	const address: Address = {};
+	if (label) address.label = label;
+	if (value[2]) address.street = value[2];
+	if (value[3]) address.city = value[3];
+	if (value[4]) address.state = value[4];
+	if (value[5]) address.postcode = value[5];
+	if (value[6]) address.country = value[6];
 	if (Array.isArray(o.addresses))
-		return { ...o, addresses: [...o.addresses!, address] };
-	return {
-		...o,
-		addresses: [address],
-	};
+		return { ...o, addresses: [...o.addresses, address] };
+	return { ...o, addresses: [address] };
 }
 
-function wrapInBrackets(value: string, label?: string) {
-	return label ? `[[${value}|${label}: ${value}]]` : `[[${value}]]`;
+function unescapeVCard(value: string): string {
+	return value
+		.replace(/\\n/gi, "\n")
+		.replace(/\\,/g, ",")
+		.replace(/\\;/g, ";");
 }
 
 function addValueToArray(
