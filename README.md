@@ -64,7 +64,7 @@ Typical uses:
 ---
 
 <p align="center">
-<img src="images/contacts-example.jpg" width="450" alt="400">  
+<img src="images/contacts-example.jpg" width="550" alt="...">  
 </p>
 
 ## What this fork adds (vs. Truls Aagaard's original)
