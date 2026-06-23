@@ -176,7 +176,8 @@ Not yet in the community store. Manual install:
 
 ### A) Prepare the data in Apple Contacts
 
-This is where the value is created. Conventions:
+This is where the value is created.  
+Conventions:
 
 - **Person ↔ person relationships** (genealogy): use **Related name** with labels
   (Mother, Father, Brother, Sister, Son, Daughter, Spouse, and custom labels such as
