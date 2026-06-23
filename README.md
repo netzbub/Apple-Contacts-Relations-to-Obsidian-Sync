@@ -13,7 +13,7 @@ and turn the **relationships** that already live in your address book (family, p
 teams, company membership) into data you can query, chart and visualise inside Obsidian.
 
 <p align="center">
-<img src="images/Beatles.jpg" width="700" alt="400">  
+<img src="images/Beatles.jpg" width="700" alt="...">  
 </p>
 
 ## Table of contents
@@ -62,6 +62,10 @@ Typical uses:
 - **Map** — plot contact addresses on a map (requires a geocoding step, see *Usage*).
 
 ---
+
+<p align="center">
+<img src="images/contacts-example.jpg" width="450" alt="400">  
+</p>
 
 ## What this fork adds (vs. Truls Aagaard's original)
 
