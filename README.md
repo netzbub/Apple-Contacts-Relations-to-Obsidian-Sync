@@ -94,7 +94,7 @@ Free text → Notes (with the `---` convention below).*
 
 | Apple field | vCard | Recommended use | Frontmatter key | Multi |
 |---|---|---|---|---|
-| First/Last/Prefix/Suffix | N / FN | Name, note title | `name` / file name | – |
+| First/Last/  Prefix/Suffix | N / FN | Name, note title | `name` / file name | – |
 | Nickname | NICKNAME | Nickname | `nickname` | – |
 | Company | ORG | Organisation | `organization` | – |
 | Department | – | Sub-grouping | `department` | – |
