@@ -1,6 +1,6 @@
 {
-	"name": "apple-contacts-relations-sync",
-	"version": "0.1.0",
+	"name": "textum",
+	"version": "0.1.1",
 	"description": "Sync macOS/iCloud Contacts into your vault as structured notes and turn contact relationships (family, projects, company) into queryable, visualisable data.",
 	"main": "main.js",
 	"scripts": {

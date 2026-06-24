@@ -1,12 +1,19 @@
-# Apple Contacts Relations to Obsidian sync
+# textum
 
 <p align="center">
-  <img src="https://img.shields.io/badge/dynamic/json?label=manifest&query=%24.version&url=https%3A%2F%2Fraw.githubusercontent.com%2Fnetzbub%2FApple-Contacts-Relations-to-Obsidian-Sync%2Fmain%2Fmanifest.json&color=blue" alt="manifest version">
-  <img src="https://img.shields.io/github/release-date/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync?color=olive" alt="release date">
-  <img src="https://img.shields.io/github/license/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync" alt="license">
-  <img src="https://img.shields.io/github/downloads/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync/total?color=blueviolet" alt="downloads">
-  <img src="https://img.shields.io/github/issues/netzbub/Apple-Contacts-Relations-to-Obsidian-Sync?color=yellow" alt="open issues">
+  <img src="https://img.shields.io/badge/dynamic/json?label=manifest&query=%24.version&url=https%3A%2F%2Fraw.githubusercontent.com%2Fnetzbub%2Ftextum%2Fmain%2Fmanifest.json&color=blue" alt="manifest version">
+  <img src="https://img.shields.io/github/release-date/netzbub/textum?color=olive" alt="release date">
+  <img src="https://img.shields.io/github/license/netzbub/textum" alt="license">
+  <img src="https://img.shields.io/github/downloads/netzbub/textum/total?color=blueviolet" alt="downloads">
+  <img src="https://img.shields.io/github/issues/netzbub/textum?color=yellow" alt="open issues">
 </p>
+
+*Weave your Apple / iCloud Contacts — and the relationships between them — into Obsidian
+as clean, queryable Markdown.*
+
+> **The name.** *textum* (Latin) — a woven fabric; also: a text. The plugin weaves your
+> contacts and the relationships already in your address book into one connected, textual
+> graph inside Obsidian.
 
 Sync macOS / iCloud Contacts into Obsidian as clean, well-structured Markdown notes —
 and turn the **relationships** that already live in your address book (family, project
@@ -19,7 +26,7 @@ teams, company membership) into data you can query, chart and visualise inside O
 ## Table of contents
 <!-- TOC -->
 
-- [Apple Contacts Relations to Obsidian sync](#apple-contacts-relations-to-obsidian-sync)
+- [textum](#textum)
     - [Table of contents](#table-of-contents)
     - [Purpose](#purpose)
     - [What this fork adds vs. Truls Aagaard's original](#what-this-fork-adds-vs-truls-aagaards-original)
@@ -124,11 +131,20 @@ Free text → Notes (with the `---` convention below).*
 
 ## Installation
 
-Not yet in the community store. Manual install:
+Not yet in the community store. Two ways to install:
+
+### Option A — BRAT (recommended)
+
+1. Install **BRAT** (Settings → Community plugins → Browse → "BRAT").
+2. BRAT → **Add beta plugin** → paste: `netzbub/textum`
+3. Confirm. BRAT installs **textum** from the latest release and keeps it updated.
+4. Enable **textum** under *Settings → Community plugins*.
+
+### Option B — manual
 
 1. Build: `npm install` then `npm run build` → produces `main.js`.
-2. Copy `main.js`, `manifest.json` (and `styles.css` if present) into
-   `<your-vault>/.obsidian/plugins/apple-contacts-relations-sync/`.
+2. Copy `main.js` and `manifest.json` into
+   `<your-vault>/.obsidian/plugins/textum/`.
 3. Enable the plugin under *Settings → Community plugins*.
 
 (For development: `npm run dev` for a watching build; `npm test` runs the Jest suite.)
