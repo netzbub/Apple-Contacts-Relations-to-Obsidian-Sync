@@ -116,6 +116,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 	settingsChanged: false,
 	iCloudServerUrl: "https://contacts.icloud.com",
 	groups: [],
+	chartedRootsKeys: false,
 	previousUpdateSettings: {
 		username: "username",
 		password: "password",
@@ -133,6 +134,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		previousUpdateSettings: undefined,
 		previousUpdateData: [],
 		groups: [],
+		chartedRootsKeys: false,
 	},
 	previousUpdateData: [],
 };

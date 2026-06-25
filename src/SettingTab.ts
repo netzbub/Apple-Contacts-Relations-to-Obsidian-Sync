@@ -28,6 +28,7 @@ export interface ICloudContactsSettings {
 	addressLabels: boolean;
 	excludedKeys: string;
 	iCloudServerUrl: string;
+	chartedRootsKeys: boolean;
 	previousUpdateSettings?: ICloudContactsSettings;
 	previousUpdateData?: ICloudVCard[];
 	groups: string[];
@@ -46,6 +47,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	iCloudServerUrl: "https://contacts.icloud.com",
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality vnd63SensitiveContentConfig",
+	chartedRootsKeys: true,
 	groups: [],
 };
 
@@ -219,6 +221,20 @@ export class SettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.addressLabels)
 					.onChange(async (value) => {
 						this.plugin.settings.addressLabels = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Write Charted Roots keys (cr_type, cr_id)")
+			.setDesc(
+				"Add cr_type (person, or organization for Apple 'Company' cards) and a stable cr_id (Apple UID) to each contact, so the notes are recognised by the Charted Roots plugin.",
+			)
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.chartedRootsKeys)
+					.onChange(async (value) => {
+						this.plugin.settings.chartedRootsKeys = value;
 						await this.plugin.saveSettings();
 					}),
 			);

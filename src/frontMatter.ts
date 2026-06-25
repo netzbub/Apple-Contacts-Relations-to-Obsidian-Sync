@@ -12,6 +12,7 @@ export function createFrontmatter(
 		relatedLabels: boolean;
 		addressLabels: boolean;
 		excludedKeys: string;
+		chartedRootsKeys?: boolean;
 	},
 	groupNames?: string[],
 ) {
@@ -34,6 +35,7 @@ export function createFrontmatterFromParsedVCard(
 		relatedLabels,
 		addressLabels,
 		excludedKeys,
+		chartedRootsKeys,
 	}: {
 		telLabels: boolean;
 		emailLabels: boolean;
@@ -41,6 +43,7 @@ export function createFrontmatterFromParsedVCard(
 		relatedLabels: boolean;
 		addressLabels: boolean;
 		excludedKeys: string;
+		chartedRootsKeys?: boolean;
 	},
 	groupNames?: string[],
 ) {
@@ -131,6 +134,15 @@ export function createFrontmatterFromParsedVCard(
 	);
 	if (groupNames && groupNames.length > 0)
 		(contact as any).groups = groupNames.map((g) => `[[${g}]]`);
+	if (chartedRootsKeys) {
+		const isOrg = parsedVCards.some(
+			(c) => (c.key as string) === "xAbShowAs" && c.value === "COMPANY",
+		);
+		(contact as any).cr_type = isOrg ? "organization" : "person";
+		const uid = parsedVCards.find((c) => (c.key as string) === "uid")
+			?.value;
+		if (typeof uid === "string" && uid) (contact as any).cr_id = uid;
+	}
 	return contact as { [key: string]: string | string[] };
 }
 

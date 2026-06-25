@@ -250,7 +250,7 @@ Contacts"** (rewrites everything — use after changing settings/excluded keys).
 
 The plugin only manages a fixed set of keys plus the title and the top H1. **Anything
 else you write in a note — and any extra frontmatter keys you add yourself (e.g.
-`rating:`, `lat:`, `lng:`, or Charted Roots' `cr_type:` / `cr_id:`) — is preserved across
+`rating:`, `lat:`, `lng:`) — is preserved across
 syncs.** Sync is one-way (iCloud → Obsidian) by design: edits or corruption in Obsidian
 can never flow back to your address book.
 
@@ -304,7 +304,9 @@ Charted Roots project.
 
 | textum frontmatter | Charted Roots property | Role in Charted Roots |
 |---|---|---|
-| note title / `name` | `name` | person node (requires `cr_type: person`, see below) |
+| note title / `name` | `name` | person node |
+| `cr_type` (`person` / `organization`) | `cr_type` | note-type detection — written automatically (see below) |
+| `cr_id` (Apple UID) | `cr_id` | stable unique id — written automatically |
 | `father` | `father` | parent edge (drawn in the tree) |
 | `mother` | `mother` | parent edge (drawn in the tree) |
 | `spouse` | `spouse` | spouse edge (drawn in the tree) |
@@ -327,18 +329,18 @@ of each family edge itself.
    `uncle`, `aunt`, `nephew`, `niece`, `grandfather`, `grandmother` so they render with a
    label/line style in the Entity Profile.
 
-**Known limitation — note-type detection.** Charted Roots only treats a note as a person
-when it carries `cr_type: person` (or the legacy `type: person`, or a `#person` tag).
-textum does **not** write `cr_type` yet, so freshly synced notes are not picked up by
-Charted Roots until that marker is present. Until textum optionally writes it, add it
-once on the Charted Roots side (a template default or a bulk property edit); because the
-key is outside textum's managed set, it survives subsequent syncs.
+**Note-type detection.** Charted Roots only treats a note as a person when it carries
+`cr_type: person` (companies use `cr_type: organization`; the legacy `type:` or a
+`#person` tag also work). textum writes `cr_type` and a stable `cr_id` (the Apple UID)
+automatically — controlled by the *Write Charted Roots keys* setting, on by default. Apple
+"Company" cards (`X-ABShowAs:COMPANY`) are written as `organization`, everyone else as
+`person`. Disable the setting if you don't use Charted Roots.
 
-**Organisations are Phase 2.** Apple Contacts only provides the company as a plain text
-string (`ORG`), which textum writes to `organization`. Charted Roots' richer organisation
-model (`cr_type: organization`, `parent_org`, `membership_orgs` / `membership_roles`, …)
-would have to be populated separately; translating Apple's flat ORG text into linked
-organisation notes is left for a later iteration.
+**Organisation *hierarchies* are Phase 2.** Company cards are marked `cr_type:
+organization`, but Apple only provides the firm as a plain text string (`ORG`, written to
+`organization`). Charted Roots' richer organisation model — `parent_org`,
+`membership_orgs` / `membership_roles`, seats, roles — is not populated; linking people to
+firms and building org hierarchies from the flat ORG text is left for a later iteration.
 
 ---
 

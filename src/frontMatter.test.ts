@@ -833,6 +833,89 @@ describe("createFrontmatter groups", () => {
 	});
 });
 
+describe("createFrontmatter Charted Roots keys", () => {
+	const crSettings = {
+		...defaultSettings,
+		excludedKeys: "xAbLabel xAbadr uid xAbShowAs",
+		chartedRootsKeys: true,
+	};
+
+	test("Should write cr_type person and cr_id (uid) for a person", () => {
+		expect(
+			createFrontmatterFromParsedVCard(
+				[
+					{ key: "nickname", meta: {}, type: "text", value: "nick" },
+					{
+						key: "uid",
+						meta: {},
+						type: "text",
+						value: "cc980d6c-0b58-4a14-a239-16325c834237",
+					},
+				] as any,
+				"Test Person",
+				crSettings,
+			),
+		).toEqual({
+			name: "Test Person",
+			nickname: "nick",
+			cr_type: "person",
+			cr_id: "cc980d6c-0b58-4a14-a239-16325c834237",
+		});
+	});
+
+	test("Should write cr_type organization for an Apple company card", () => {
+		expect(
+			createFrontmatterFromParsedVCard(
+				[
+					{
+						key: "org",
+						meta: {},
+						type: "text",
+						value: ["Karl Köhler GmbH", ""],
+					},
+					{
+						key: "xAbShowAs",
+						meta: {},
+						type: "text",
+						value: "COMPANY",
+					},
+					{
+						key: "uid",
+						meta: {},
+						type: "text",
+						value: "11111111-2222-3333-4444-555555555555",
+					},
+				] as any,
+				"Karl Köhler GmbH",
+				crSettings,
+			),
+		).toEqual({
+			name: "Karl Köhler GmbH",
+			organization: "Karl Köhler GmbH",
+			cr_type: "organization",
+			cr_id: "11111111-2222-3333-4444-555555555555",
+		});
+	});
+
+	test("Should not write Charted Roots keys when disabled", () => {
+		const result = createFrontmatterFromParsedVCard(
+			[
+				{ key: "nickname", meta: {}, type: "text", value: "nick" },
+				{
+					key: "uid",
+					meta: {},
+					type: "text",
+					value: "cc980d6c-0b58-4a14-a239-16325c834237",
+				},
+			] as any,
+			"Test Person",
+			{ ...crSettings, chartedRootsKeys: false },
+		);
+		expect(result).not.toHaveProperty("cr_type");
+		expect(result).not.toHaveProperty("cr_id");
+	});
+});
+
 describe("createFrontmatter", () => {
 	describe("parseVCard", () => {
 		test.each(testCases)(
