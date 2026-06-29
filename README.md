@@ -155,7 +155,7 @@ Not yet in the community store. Two ways to install:
 ### Option B — manual
 
 1. Build: `npm install` then `npm run build` → produces `main.js`.
-2. Copy `main.js` and `manifest.json` into
+2. Copy `main.js`, `manifest.json` and `styles.css` into
    `<your-vault>/.obsidian/plugins/textum/`.
 3. Enable the plugin under *Settings → Community plugins*.
 
@@ -249,8 +249,8 @@ Conventions:
 
 ### B) Sync into Obsidian
 
-Run the command **"Update Contacts"** (only changed contacts) or **"Update all
-Contacts"** (rewrites everything — use after changing settings/excluded keys).
+Run the command **"Update contacts"** (only changed contacts) or **"Update all
+contacts"** (rewrites everything — use after changing settings/excluded keys).
 
 The plugin only manages a fixed set of keys plus the title and the top H1. **Anything
 else you write in a note — and any extra frontmatter keys you add yourself (e.g.
@@ -339,7 +339,7 @@ of each family edge itself.
 automatically — controlled by the *Write Charted Roots keys* setting, on by default. Apple
 "Company" cards (`X-ABShowAs:COMPANY`) are written as `organization`, everyone else as
 `person`. Disable the setting if you don't use Charted Roots. Toggling this setting counts
-as a settings change, so the next *Update Contacts* run rewrites every note to add (or
+as a settings change, so the next *Update contacts* run rewrites every note to add (or
 remove) the keys.
 
 **Organisation *hierarchies* are Phase 2.** Company cards are marked `cr_type:
