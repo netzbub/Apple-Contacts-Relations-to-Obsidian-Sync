@@ -101,7 +101,7 @@ export default class ICloudContacts extends Plugin {
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: "update-contacts",
-			name: "Update Contacts",
+			name: "Update contacts",
 			callback: async () => {
 				const { updateData, usedSettings } =
 					await this.api.updateContacts();
@@ -111,7 +111,7 @@ export default class ICloudContacts extends Plugin {
 
 		this.addCommand({
 			id: "update-all-contacts",
-			name: "Update all Contacts",
+			name: "Update all contacts",
 			callback: async () => {
 				const { updateData, usedSettings } =
 					await this.api.updateContacts({
@@ -121,7 +121,7 @@ export default class ICloudContacts extends Plugin {
 			},
 		});
 
-		this.addRibbonIcon("sync", "Update Contacts", () =>
+		this.addRibbonIcon("sync", "Update contacts", () =>
 			this.api.updateContacts(),
 		);
 

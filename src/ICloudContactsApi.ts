@@ -324,12 +324,6 @@ export default class ICloudContactsApi {
 		if (newCount + modifiedCount + deletedCount === 0)
 			noticeText += "Already up to date";
 		this.showNotice(noticeText, 7000);
-		console.log(pluginName, {
-			newContacts: this.newContacts,
-			modifiedContacts: this.modifiedContacts,
-			deletedContacts: this.deletedContacts,
-			skippedContacts: this.skippedContacts,
-		});
 	}
 
 	private async moveDeletedContacts(
